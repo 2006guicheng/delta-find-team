@@ -763,6 +763,7 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim
 </main>
 
 <!-- ==================== JS ==================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const RANKS = ['青铜','白银','黄金','铂金','钻石','黑鹰','三角洲巅峰'];
 const PLAYSTYLES = ['撕咬流','劝架流','战术流','堵桥流','扰民流','不撤流','技能流','鼠鼠流'];
@@ -775,25 +776,50 @@ const OPERATOR_ROLES = {
   '蜂衣':'医疗','女医':'医疗','碟':'医疗'
 };
 
+// Supabase 初始化
+const SUPABASE_URL = 'https://gugnthkphafbwvyfmtzc.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1Z250aGtwaGFmYnd2eWZtdHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMzA3MTIsImV4cCI6MjA5NTcwNjcxMn0.ICDGFBQ3DPqbmfl-R0CiMo3ZWVjVhNLX_SWYctRb4ms';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // 页面切换
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'square') renderSquare();
-  if (name === 'mine') renderMyCards();
+  if (name === 'square') { renderSquare(); }
+  if (name === 'mine') { renderMyCards(); }
 }
 
 // 数据存取
-function getCards() {
-  try { return JSON.parse(localStorage.getItem('delta_cards') || '[]'); }
-  catch(e) { return []; }
+// Supabase 数据存取
+async function getCards() {
+  const { data, error } = await supabase.from('cards').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('读取失败:', error); return []; }
+  return data || [];
 }
-function saveCards(cards) { localStorage.setItem('delta_cards', JSON.stringify(cards)); }
+async function saveCard(card) {
+  const { error } = await supabase.from('cards').insert([card]);
+  if (error) console.error('保存失败:', error);
+  return !error;
+}
+async function updateCard(id, updates) {
+  const { error } = await supabase.from('cards').update(updates).eq('id', id);
+  if (error) console.error('更新失败:', error);
+  return !error;
+}
+async function deleteCardDB(id) {
+  const { error } = await supabase.from('cards').delete().eq('id', id);
+  if (error) console.error('删除失败:', error);
+  return !error;
+}
 
 let myIdentity = localStorage.getItem('delta_my_identity') || '';
-function getMyCards() { return myIdentity ? getCards().filter(c => c.ownerId === myIdentity) : []; }
+async function getMyCards() {
+  if (!myIdentity) return [];
+  const cards = await getCards();
+  return cards.filter(c => c.owner_id === myIdentity);
+}
 
 // 选项选择
 function selectOption(el) {
@@ -843,7 +869,7 @@ function opClass(op) {
 }
 
 // 发布卡片
-function publishCard() {
+async function publishCard() {
   const gameId = document.getElementById('pub-gameId').value.trim();
   const gender = getSelectedValue('pub-gender');
   const rank = getSelectedValue('pub-rank');
@@ -879,16 +905,15 @@ function publishCard() {
   }
 
   const card = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    ownerId: myIdentity, gameId, gender, rank, kd, equipment, playstyle,
-    mode, maps, ops, teamSize, voice, contactType,
-    contactValue: contactType === '微信号' ? document.getElementById('pub-wechat').value.trim() : gameId,
-    timeStart, timeEnd, bio, active: true, createdAt: Date.now(), messages: []
+    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    owner_id: myIdentity, game_id: gameId, gender, rank, kd, equipment, playstyle,
+    mode, maps, ops, team_size: teamSize, voice, contact_type: contactType,
+    contact_value: contactType === '微信号' ? document.getElementById('pub-wechat').value.trim() : gameId,
+    time_start: timeStart, time_end: timeEnd, bio, active: true, created_at: new Date().toISOString(), messages: []
   };
 
-  const cards = getCards();
-  cards.unshift(card);
-  saveCards(cards);
+  const ok = await saveCard(card);
+  if (!ok) { alert('发布失败，请重试'); return; }
 
   // 清空
   document.querySelectorAll('#page-publish .selected').forEach(e => e.classList.remove('selected'));
@@ -926,9 +951,9 @@ function calculateMatch(a, b) {
   const mapOverlap = a.maps.filter(m => b.maps.includes(m));
   if (mapOverlap.length) score += Math.min(10, mapOverlap.length * 5);
   if (a.mode === b.mode || a.mode === '都行' || b.mode === '都行') score += 8;
-  if (a.teamSize === b.teamSize) score += 5;
+  if (a.team_size === b.team_size) score += 5;
   if (a.equipment === b.equipment) score += 3;
-  if (timeOverlap(a.timeStart, a.timeEnd, b.timeStart, b.timeEnd) >= 60) score += 2;
+  if (timeOverlap(a.time_start, a.time_end, b.time_start, b.time_end) >= 60) score += 2;
   return score;
 }
 
@@ -939,8 +964,8 @@ function scoreLabel(s) {
 }
 
 // 渲染广场
-function renderSquare() {
-  const allCards = getCards().filter(c => c.active);
+async function renderSquare() {
+  const allCards = (await getCards()).filter(c => c.active);
   const container = document.getElementById('cards-container');
   const empty = document.getElementById('empty-state');
   if (allCards.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -959,7 +984,7 @@ function renderSquare() {
     if (fr && c.rank !== fr) return false;
     if (fe && c.equipment !== fe) return false;
     if (fmap && !c.maps.includes(fmap)) return false;
-    if (ft && c.teamSize !== ft) return false;
+    if (ft && c.team_size !== ft) return false;
     if (fkd > 0 && (c.kd||0) < fkd) return false;
     return true;
   });
@@ -967,10 +992,10 @@ function renderSquare() {
   if (filtered.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
 
-  const myCard = myIdentity ? allCards.find(c => c.ownerId === myIdentity && c.active) : null;
+  const myCard = myIdentity ? allCards.find(c => c.owner_id === myIdentity && c.active) : null;
   if (myCard) {
     filtered.forEach(c => {
-      if (c.ownerId === myIdentity) c._isMine = true;
+      if (c.owner_id === myIdentity) c._isMine = true;
       else c._matchScore = calculateMatch(myCard, c);
     });
     filtered.sort((a,b) => {
@@ -1008,7 +1033,7 @@ function renderSquare() {
         <span class="card-playstyle">${emoji} ${c.playstyle}</span>
         <span class="card-rank${rankCls}">${c.rank}</span>
       </div>
-      <div class="card-mode-row">${c.mode} · ${c.teamSize}  ${mineBdg}</div>
+      <div class="card-mode-row">${c.mode} · ${c.team_size}  ${mineBdg}</div>
       <div class="card-stats">
         <span class="card-stat">KD <strong class="kd-val">${c.kd||'--'}</strong></span>
         <span class="card-stat">装备 <strong>${c.equipment}</strong></span>
@@ -1018,7 +1043,7 @@ function renderSquare() {
       ${opsHtml?`<div class="card-ops">${opsHtml}</div>`:''}
       <div class="card-bio">"${c.bio}"</div>
       <div class="card-footer">
-        <span class="card-time">🕐 ${c.timeStart}-${c.timeEnd}</span>
+        <span class="card-time">🕐 ${c.time_start}-${c.time_end}</span>
         ${matchHtml}
         ${actionBtn}
       </div>
@@ -1036,16 +1061,17 @@ function applyFilters() { renderSquare(); }
 
 // 联系弹窗
 let currentContactCard = null;
-function openContact(cardId) {
-  const card = getCards().find(c => c.id === cardId);
+async function openContact(cardId) {
+  const cards = await getCards();
+  const card = cards.find(c => c.id === cardId);
   if (!card) return;
   currentContactCard = card;
   document.getElementById('modal-content').innerHTML = `
     <p><strong style="color:#f0f2f5">${PLAYSTYLE_EMOJI[card.playstyle]||''} ${card.playstyle} · ${card.rank}</strong></p>
-    <p style="font-size:13px;color:var(--text-2)">🕐 ${card.timeStart}-${card.timeEnd}</p>
+    <p style="font-size:13px;color:var(--text-2)">🕐 ${card.time_start}-${card.time_end}</p>
     <p style="font-size:13px;color:var(--text-2)">🎮 对方游戏ID：</p>
-    <div class="copy-id" onclick="copyId('${card.gameId}')" title="点击复制">${card.gameId} 📋</div>
-    ${card.contactType==='微信号'?`<p style="font-size:13px;color:var(--text-2)">💬 微信号：<strong style="color:#fff">${card.contactValue}</strong></p>`:''}
+    <div class="copy-id" onclick="copyId('${card.game_id}')" title="点击复制">${card.game_id} 📋</div>
+    ${card.contact_type==='微信号'?`<p style="font-size:13px;color:var(--text-2)">💬 微信号：<strong style="color:#fff">${card.contact_value}</strong></p>`:''}
     <p style="font-size:13px;color:var(--text-2);margin-top:10px">或者留个消息让对方加你：</p>
     <textarea id="modal-msg" placeholder="哥们我也${card.playstyle}打法，今晚有空一起？" maxlength="100" style="margin-top:6px"></textarea>
   `;
@@ -1056,24 +1082,24 @@ function copyId(id) {
   navigator.clipboard.writeText(id).then(() => alert('✅ 已复制：'+id+'\n去游戏里搜索添加好友吧！'))
     .catch(() => prompt('复制下面的游戏ID：', id));
 }
-function sendMessage() {
+async function sendMessage() {
   if (!currentContactCard) return;
   const msg = document.getElementById('modal-msg').value.trim();
   if (!msg) { alert('写点什么吧'); return; }
-  const cards = getCards();
-  const idx = cards.findIndex(c => c.id === currentContactCard.id);
-  if (idx === -1) return;
-  cards[idx].messages.push({ from: myIdentity, content: msg, time: Date.now() });
-  saveCards(cards);
+  const cards = await getCards();
+  const card = cards.find(c => c.id === currentContactCard.id);
+  if (!card) return;
+  const newMessages = [...(card.messages || []), { from: myIdentity, content: msg, time: Date.now() }];
+  await updateCard(card.id, { messages: newMessages });
   document.getElementById('modal-msg').value = '';
   alert('✅ 消息已发送！');
   closeModal();
 }
 
 // 我的发布
-function renderMyCards() {
+async function renderMyCards() {
   const container = document.getElementById('my-cards-container');
-  const myCards = getMyCards();
+  const myCards = await getMyCards();
   if (myCards.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>还没有发布过找队友信息</p><p style="font-size:13px">去发布一条，让合适的队友找到你</p></div>`;
     return;
@@ -1091,7 +1117,7 @@ function renderMyCards() {
         <span style="font-weight:700;color:#f0f2f5">${emoji} ${card.playstyle} · ${card.rank}</span>
         <span class="status ${card.active?'active-status':'paused'}">${card.active?'🟢 展示中':'⏸️ 已暂停'}</span>
       </div>
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:6px">KD ${card.kd} · ${card.equipment} · ${card.mode} · ${card.teamSize} · ${card.timeStart}-${card.timeEnd}</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:6px">KD ${card.kd} · ${card.equipment} · ${card.mode} · ${card.team_size} · ${card.time_start}-${card.time_end}</div>
       <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">"${card.bio}"</div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button style="padding:4px 14px;font-size:12px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text-2);cursor:pointer" onclick="toggleCardActive('${card.id}')">${card.active?'⏸️ 暂停':'▶️ 恢复'}</button>
@@ -1104,8 +1130,16 @@ function renderMyCards() {
     </div>`;
   }).join('');
 }
-function toggleCardActive(cardId) { const cards=getCards(); const i=cards.findIndex(c=>c.id===cardId); if(i>-1){cards[i].active=!cards[i].active;saveCards(cards);renderMyCards();renderSquare();} }
-function deleteCard(cardId) { if(!confirm('确定删除？'))return; saveCards(getCards().filter(c=>c.id!==cardId)); renderMyCards(); renderSquare(); }
+async function toggleCardActive(cardId) {
+  const cards = await getCards();
+  const card = cards.find(c => c.id === cardId);
+  if (card) { await updateCard(cardId, { active: !card.active }); renderMyCards(); renderSquare(); }
+}
+async function deleteCard(cardId) {
+  if (!confirm('确定删除？')) return;
+  await deleteCardDB(cardId);
+  renderMyCards(); renderSquare();
+}
 </script>
 </body>
 </html>
