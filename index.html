@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三角洲行动 · 找队友</title>
+<style>
+/* ============================================================
+   三角洲找队友 — 军事战术风 UI
+   ============================================================ */
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:        #070b10;
+  --surface:   #0d1320;
+  --card:      #131b2a;
+  --card-alt:  #182033;
+  --border:    #1c2738;
+  --border-hi: #263548;
+  --text:      #dde1e8;
+  --text-2:    #99a6b8;
+  --text-dim:  #576478;
+  --gold:      #e6a030;
+  --gold-dim:  rgba(230,160,48,.12);
+  --gold-glow: rgba(230,160,48,.22);
+  --red:       #f2543d;
+  --green:     #3fb950;
+  --blue:      #5098f0;
+  --blue-dim:  rgba(80,152,240,.1);
+  --purple:    #a67cf7;
+  --purple-dim:rgba(166,124,247,.1);
+  --cyan:      #3ccfbc;
+  --cyan-dim:  rgba(60,207,188,.1);
+  --radius:    10px;
+  --radius-sm: 6px;
+  --transition: .18s cubic-bezier(.4,0,.2,1);
+}
+
+html { background: var(--bg); }
+
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(230,160,48,.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 100%, rgba(80,152,240,.03) 0%, transparent 50%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* 背景网格纹理 */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+/* ========== 顶部导航 ========== */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,19,32,.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 54px;
+}
+
+.logo {
+  font-size: 18px; font-weight: 800; color: #fff;
+  display: flex; align-items: center; gap: 8px;
+  letter-spacing: .5px;
+}
+.logo .icon { font-size: 22px; }
+.logo span { color: var(--gold); }
+.logo .ver { font-size: 10px; color: var(--text-dim); font-weight: 400; margin-left: 4px; }
+
+nav { display: flex; gap: 2px; }
+nav button {
+  background: none; border: none;
+  color: var(--text-2); padding: 7px 18px; border-radius: 6px;
+  cursor: pointer; font-size: 13.5px; font-weight: 500;
+  transition: var(--transition); position: relative;
+}
+nav button:hover { color: #eef0f4; background: rgba(255,255,255,.04); }
+nav button.active {
+  color: var(--gold);
+  background: var(--gold-dim);
+}
+
+/* ========== 主容器 ========== */
+main {
+  max-width: 980px; margin: 0 auto; padding: 24px 20px 60px;
+  position: relative; z-index: 1;
+}
+
+.page { display: none; }
+.page.active { display: block; animation: fadeUp .3s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 筛选栏 ========== */
+.filters {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.filter-row {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px; margin-bottom: 8px;
+}
+.filter-row:last-child { margin-bottom: 0; }
+
+.filter-label {
+  font-size: 12px; color: var(--text-dim); white-space: nowrap;
+  padding: 5px 0; min-width: 44px; font-weight: 500;
+}
+
+.tag {
+  padding: 5px 13px; border-radius: 20px;
+  font-size: 12.5px; cursor: pointer;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,.03);
+  color: var(--text-2);
+  transition: var(--transition);
+  white-space: nowrap; user-select: none;
+  font-weight: 500;
+}
+.tag:hover { border-color: var(--border-hi); color: #d0d5dd; background: rgba(255,255,255,.06); }
+.tag.active {
+  border-color: var(--gold); color: var(--gold);
+  background: var(--gold-dim);
+  box-shadow: 0 0 12px var(--gold-dim);
+}
+
+select.filter-select, input.filter-input {
+  padding: 5px 12px; border-radius: 20px; font-size: 12.5px;
+  border: 1px solid var(--border); background: rgba(255,255,255,.03);
+  color: var(--text); outline: none; cursor: pointer;
+  transition: var(--transition);
+}
+select.filter-select:hover, input.filter-input:hover { border-color: var(--border-hi); }
+select.filter-select:focus, input.filter-input:focus { border-color: var(--gold); }
+input.filter-input { width: 56px; cursor: text; }
+
+/* ========== 提示条 ========== */
+.tip-box {
+  background: linear-gradient(135deg, rgba(80,152,240,.06), rgba(166,124,247,.06));
+  border: 1px solid rgba(80,152,240,.15);
+  border-radius: 8px; padding: 10px 16px;
+  font-size: 12.5px; color: var(--blue);
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 6px;
+}
+.tip-box strong { color: #74b0ff; }
+
+/* ========== 卡片网格 ========== */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  position: relative;
+  transition: all var(--transition);
+  overflow: hidden;
+}
+.card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,.008));
+  pointer-events: none; border-radius: var(--radius);
+}
+.card:hover {
+  border-color: var(--border-hi);
+  border-left-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.02) inset;
+}
+
+/* 自己的卡片 */
+.card.mine {
+  border-left-color: var(--gold) !important;
+  border-color: rgba(230,160,48,.25);
+  background: linear-gradient(135deg, rgba(230,160,48,.04) 0%, var(--card) 25%);
+}
+.card.mine:hover { border-left-color: var(--gold) !important; box-shadow: 0 6px 24px rgba(0,0,0,.3), 0 0 20px var(--gold-dim); }
+
+/* 卡片顶部金色条 */
+.card.mine::before {
+  content: '👤 我的卡片';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), rgba(230,160,48,.3), transparent);
+  color: transparent;
+  font-size: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-playstyle {
+  font-size: 15px; font-weight: 700; color: #f0f2f5;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.card-rank {
+  font-size: 11.5px; padding: 3px 10px; border-radius: 10px;
+  background: var(--gold-dim); color: var(--gold);
+  font-weight: 700; letter-spacing: .3px;
+}
+
+.card-rank.rank-high {
+  background: rgba(248,81,73,.12); color: var(--red);
+}
+
+.card-mode-row {
+  font-size: 12px; color: var(--text-2); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.mine-badge {
+  font-size: 10.5px; padding: 2px 8px; border-radius: 8px;
+  background: var(--gold-dim); color: var(--gold); font-weight: 700;
+}
+
+.card-stats {
+  display: flex; gap: 14px; font-size: 13px; margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.card-stat { display: flex; align-items: center; gap: 4px; color: var(--text-2); }
+.card-stat strong { color: #dde; }
+.card-stat .kd-val { color: #fff; font-weight: 700; font-size: 14px; }
+
+.card-maps, .card-ops {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;
+}
+
+.mini-tag {
+  font-size: 11px; padding: 3px 9px; border-radius: 8px;
+  background: var(--blue-dim); color: var(--blue);
+  border: 1px solid rgba(80,152,240,.15);
+  font-weight: 500;
+}
+.mini-tag.map {
+  background: var(--cyan-dim); color: var(--cyan);
+  border-color: rgba(60,207,188,.15);
+}
+.mini-tag.op-assault  { background: rgba(240,160,48,.1); color: var(--gold); border-color: rgba(240,160,48,.15); }
+.mini-tag.op-info    { background: var(--purple-dim); color: var(--purple); border-color: rgba(166,124,247,.15); }
+.mini-tag.op-eng     { background: var(--gold-dim); color: var(--gold); border-color: rgba(230,160,48,.15); }
+.mini-tag.op-medic   { background: rgba(63,185,80,.1);  color: var(--green); border-color: rgba(63,185,80,.15); }
+
+.card-bio {
+  font-size: 13px; color: var(--text-2); font-style: italic;
+  margin: 8px 0; padding: 8px 10px;
+  background: rgba(255,255,255,.015); border-radius: 6px;
+  border-left: 2px solid var(--border);
+}
+
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.04);
+}
+
+.card-time { font-size: 11.5px; color: var(--text-dim); }
+
+/* 匹配度 */
+.match-score {
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px;
+}
+.match-score.high { color: var(--green); }
+.match-score.mid  { color: var(--gold); }
+.match-score.low  { color: var(--text-dim); }
+.match-bar {
+  width: 48px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.06); overflow: hidden;
+}
+.match-bar-fill {
+  height: 100%; border-radius: 2px; transition: width .5s ease;
+}
+.match-bar-fill.high { background: var(--green); }
+.match-bar-fill.mid  { background: var(--gold); }
+.match-bar-fill.low  { background: var(--text-dim); }
+
+/* 按钮 */
+.btn-contact {
+  padding: 6px 18px; border-radius: 6px;
+  border: 1px solid rgba(230,160,48,.3);
+  background: linear-gradient(135deg, rgba(230,160,48,.08), rgba(230,160,48,.03));
+  color: var(--gold); cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  transition: var(--transition);
+}
+.btn-contact:hover {
+  background: linear-gradient(135deg, rgba(230,160,48,.18), rgba(230,160,48,.08));
+  border-color: var(--gold);
+  box-shadow: 0 0 16px var(--gold-dim);
+}
+
+.card-gender {
+  position: absolute; top: 14px; right: 16px;
+  font-size: 13px; opacity: .6;
+}
+
+/* ========== 发布表单 ========== */
+.form-page { max-width: 620px; margin: 0 auto; }
+
+.form-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 14px;
+}
+.form-section h3 {
+  font-size: 14px; color: #e0e3e8; margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  font-weight: 700; letter-spacing: .5px;
+}
+
+.option-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+.option-btn {
+  padding: 7px 15px; border-radius: 8px;
+  font-size: 13px; cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  color: var(--text-2);
+  transition: var(--transition);
+  user-select: none; text-align: center;
+  font-weight: 500;
+}
+.option-btn:hover { border-color: var(--border-hi); color: #d8dce3; background: rgba(255,255,255,.04); }
+.option-btn.selected {
+  border-color: var(--gold); color: var(--gold);
+  background: var(--gold-dim);
+  font-weight: 700;
+  box-shadow: 0 0 10px var(--gold-dim);
+}
+.option-btn.big { flex: 1; min-width: 140px; padding: 12px 14px; }
+.option-btn .sub { display: block; font-size: 11px; color: var(--text-dim); font-weight: 400; margin-top: 3px; }
+
+.form-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.form-row label { font-size: 13px; color: var(--text-2); white-space: nowrap; min-width: 72px; text-align: right; }
+
+input[type="text"], input[type="number"] {
+  padding: 9px 13px; border-radius: 6px;
+  border: 1px solid var(--border); background: rgba(0,0,0,.25);
+  color: var(--text); font-size: 14px; outline: none;
+  transition: var(--transition);
+}
+input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+
+textarea {
+  padding: 10px 13px; border-radius: 6px;
+  border: 1px solid var(--border); background: rgba(0,0,0,.25);
+  color: var(--text); font-size: 14px; outline: none;
+  width: 100%; resize: vertical; min-height: 56px;
+  font-family: inherit; transition: var(--transition);
+}
+textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+
+.char-count { text-align: right; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+.btn-submit {
+  width: 100%; padding: 14px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, #e6a030, #d4881e);
+  color: #0a0a0a; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: var(--transition);
+  letter-spacing: .5px;
+}
+.btn-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(230,160,48,.3); }
+
+.btn-back {
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+  color: var(--text-2); padding: 8px 18px; border-radius: 6px;
+  cursor: pointer; font-size: 13px; margin-bottom: 16px;
+  transition: var(--transition);
+}
+.btn-back:hover { border-color: var(--border-hi); color: #ddd; }
+
+/* 操作员标签在表单中 */
+.op-section-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  margin-bottom: 8px; font-weight: 600;
+}
+
+/* ========== 弹窗 ========== */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(2,3,6,.75); backdrop-filter: blur(4px);
+  z-index: 200; justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px; max-width: 400px; width: 90%;
+  box-shadow: var(--shadow-lg);
+  animation: fadeUp .25s ease;
+}
+
+.modal h3 { margin-bottom: 14px; color: #f0f2f5; font-size: 16px; }
+
+.modal p { font-size: 13.5px; margin-bottom: 8px; color: var(--text-2); }
+
+.modal .copy-id {
+  background: rgba(0,0,0,.3); border: 1px dashed var(--border);
+  padding: 12px 16px; border-radius: 6px;
+  font-size: 16px; font-weight: 700; color: var(--gold);
+  text-align: center; margin: 10px 0; cursor: pointer;
+  user-select: all; transition: var(--transition);
+}
+.modal .copy-id:hover { border-color: var(--gold); background: var(--gold-dim); }
+
+.modal textarea { margin: 10px 0; }
+
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.modal-btns button { padding: 8px 22px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; font-weight: 500; transition: var(--transition); }
+.btn-primary {
+  background: linear-gradient(135deg, #e6a030, #d4881e);
+  color: #0a0a0a; font-weight: 700; border-color: transparent !important;
+}
+.btn-primary:hover { box-shadow: 0 2px 12px rgba(230,160,48,.25); }
+.btn-ghost { background: transparent; color: var(--text-2); }
+.btn-ghost:hover { color: #ddd; border-color: var(--border-hi); }
+
+/* ========== 我的发布页 ========== */
+.my-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 14px;
+}
+
+.my-card .status {
+  font-size: 11.5px; padding: 3px 10px; border-radius: 10px; font-weight: 700;
+}
+.status.active-status { background: rgba(63,185,80,.12); color: var(--green); }
+.status.paused { background: var(--gold-dim); color: var(--gold); }
+
+.msg-item {
+  background: rgba(255,255,255,.015); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;
+}
+.msg-meta { font-size: 11.5px; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+.empty-state {
+  text-align: center; padding: 80px 20px; color: var(--text-dim);
+}
+.empty-state .icon { font-size: 52px; margin-bottom: 14px; opacity: .5; }
+.empty-state p { margin-bottom: 4px; }
+
+/* ========== 响应式 ========== */
+@media (max-width: 640px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  header { padding: 0 14px; }
+  nav button { padding: 6px 12px; font-size: 12px; }
+  .form-section { padding: 14px; }
+  .card-stats { gap: 8px; }
+  .filters { padding: 10px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== 顶部导航 ==================== -->
+<header>
+  <div class="logo">
+    <span class="icon">🎯</span>三角洲<span>找队友</span>
+    <span class="ver">BETA</span>
+  </div>
+  <nav>
+    <button onclick="showPage('square')" id="nav-square" class="active">找队友广场</button>
+    <button onclick="showPage('publish')" id="nav-publish">发布信息</button>
+    <button onclick="showPage('mine')" id="nav-mine">我的发布</button>
+  </nav>
+</header>
+
+<!-- ==================== 主容器 ==================== -->
+<main>
+
+<!-- ============ 广场页 ============ -->
+<div class="page active" id="page-square">
+  <div class="filters">
+    <div class="filter-row">
+      <span class="filter-label">打法</span>
+      <span class="tag" data-filter="playstyle" data-val="" onclick="toggleFilter(this)">全部</span>
+      <span class="tag" data-filter="playstyle" data-val="撕咬流" onclick="toggleFilter(this)">🔥 撕咬流</span>
+      <span class="tag" data-filter="playstyle" data-val="劝架流" onclick="toggleFilter(this)">🤝 劝架流</span>
+      <span class="tag" data-filter="playstyle" data-val="战术流" onclick="toggleFilter(this)">🧠 战术流</span>
+      <span class="tag" data-filter="playstyle" data-val="堵桥流" onclick="toggleFilter(this)">🌉 堵桥流</span>
+      <span class="tag" data-filter="playstyle" data-val="扰民流" onclick="toggleFilter(this)">🐺 扰民流</span>
+      <span class="tag" data-filter="playstyle" data-val="不撤流" onclick="toggleFilter(this)">💀 不撤流</span>
+      <span class="tag" data-filter="playstyle" data-val="技能流" onclick="toggleFilter(this)">⚙️ 技能流</span>
+      <span class="tag" data-filter="playstyle" data-val="鼠鼠流" onclick="toggleFilter(this)">🧀 鼠鼠流</span>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">模式</span>
+      <select class="filter-select" id="filter-mode" onchange="applyFilters()">
+        <option value="">全部</option><option value="机密">机密</option><option value="绝密">绝密</option>
+      </select>
+      <span class="filter-label">段位</span>
+      <select class="filter-select" id="filter-rank" onchange="applyFilters()">
+        <option value="">全部</option>
+        <option value="青铜">青铜</option><option value="白银">白银</option><option value="黄金">黄金</option>
+        <option value="铂金">铂金</option><option value="钻石">钻石</option><option value="黑鹰">黑鹰</option><option value="三角洲巅峰">三角洲巅峰</option>
+      </select>
+      <span class="filter-label">装备</span>
+      <select class="filter-select" id="filter-equipment" onchange="applyFilters()">
+        <option value="">全部</option><option value="猛攻全装">猛攻全装</option><option value="玻璃炮">玻璃炮</option>
+      </select>
+      <span class="filter-label">地图</span>
+      <select class="filter-select" id="filter-map" onchange="applyFilters()">
+        <option value="">全部</option><option value="零号大坝">零号大坝</option><option value="巴克什">巴克什</option>
+        <option value="航天基地">航天基地</option><option value="长弓溪谷">长弓溪谷</option><option value="潮汐监狱">潮汐监狱</option>
+      </select>
+      <span class="filter-label">人数</span>
+      <select class="filter-select" id="filter-team" onchange="applyFilters()">
+        <option value="">全部</option><option value="双人">双人</option><option value="三人">三人</option>
+      </select>
+      <span class="filter-label">≥KD</span>
+      <input class="filter-input" id="filter-kd" type="number" step="0.1" placeholder="0" onchange="applyFilters()">
+    </div>
+  </div>
+
+  <div class="tip-box">
+    💡 <strong>三人模式推荐阵容：</strong>1 突击位 + 1 信息位 + 1 工程位/医疗位 — 各司其职，胜率最高！
+  </div>
+
+  <div class="cards-grid" id="cards-container"></div>
+
+  <div class="empty-state" id="empty-state" style="display:none">
+    <div class="icon">🔍</div>
+    <p>没有找到匹配的队友</p>
+    <p style="font-size:13px">试试放宽筛选条件，或者自己去发布一条</p>
+  </div>
+</div>
+
+<!-- ============ 发布页 ============ -->
+<div class="page" id="page-publish">
+  <div class="form-page">
+    <button class="btn-back" onclick="showPage('square')">← 返回广场</button>
+
+    <div class="form-section">
+      <h3>━━━ 基本信息 ━━━</h3>
+      <div class="form-row">
+        <label>游戏 ID</label>
+        <input type="text" id="pub-gameId" placeholder="你在游戏里的名字" maxlength="30">
+      </div>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">性别</span>
+        <span class="option-btn" data-group="pub-gender" data-val="男" onclick="selectOption(this)">♂ 男</span>
+        <span class="option-btn" data-group="pub-gender" data-val="女" onclick="selectOption(this)">♀ 女</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">当前段位</span>
+        <div class="option-group">
+          <span class="option-btn" data-group="pub-rank" data-val="青铜" onclick="selectOption(this)">青铜</span>
+          <span class="option-btn" data-group="pub-rank" data-val="白银" onclick="selectOption(this)">白银</span>
+          <span class="option-btn" data-group="pub-rank" data-val="黄金" onclick="selectOption(this)">黄金</span>
+          <span class="option-btn" data-group="pub-rank" data-val="铂金" onclick="selectOption(this)">铂金</span>
+          <span class="option-btn" data-group="pub-rank" data-val="钻石" onclick="selectOption(this)">钻石</span>
+          <span class="option-btn" data-group="pub-rank" data-val="黑鹰" onclick="selectOption(this)">黑鹰</span>
+          <span class="option-btn" data-group="pub-rank" data-val="三角洲巅峰" onclick="selectOption(this)">三角洲巅峰</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>当前 KD</label>
+        <input type="number" id="pub-kd" placeholder="如 2.5" step="0.01" min="0" max="99" style="width:120px;flex:none">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 装备风格 ━━━</h3>
+      <div class="option-group">
+        <span class="option-btn big" data-group="pub-equipment" data-val="猛攻全装" onclick="selectOption(this)">
+          🛡️ 猛攻全装<span class="sub">起满装备正面刚</span>
+        </span>
+        <span class="option-btn big" data-group="pub-equipment" data-val="玻璃炮" onclick="selectOption(this)">
+          💥 玻璃炮<span class="sub">轻装高输出低容错</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 打法风格（必选）━━━</h3>
+      <div class="option-group">
+        <span class="option-btn" data-group="pub-playstyle" data-val="撕咬流" onclick="selectOption(this)">🔥 撕咬流<span class="sub">响枪就打</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="劝架流" onclick="selectOption(this)">🤝 劝架流<span class="sub">只打最后两队</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="战术流" onclick="selectOption(this)">🧠 战术流<span class="sub">蹲闸/蹲撤离点</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="堵桥流" onclick="selectOption(this)">🌉 堵桥流<span class="sub">桥上我为王</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="扰民流" onclick="selectOption(this)">🐺 扰民流<span class="sub">骚扰游击</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="不撤流" onclick="selectOption(this)">💀 不撤流<span class="sub">死战不退</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="技能流" onclick="selectOption(this)">⚙️ 技能流<span class="sub">技能配合</span></span>
+        <span class="option-btn" data-group="pub-playstyle" data-val="鼠鼠流" onclick="selectOption(this)">🧀 鼠鼠流<span class="sub">吃肥肥舔包</span></span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 主玩干员 ━━━</h3>
+      <div style="margin-bottom:10px">
+        <span class="op-section-label" style="background:rgba(240,160,48,.1);color:var(--gold)">🔫 突击位</span>
+        <div class="option-group" style="display:inline-flex;margin-bottom:6px">
+          <span class="option-btn" data-group="pub-ops" data-val="威龙" onclick="selectOption(this)">威龙</span>
+          <span class="option-btn" data-group="pub-ops" data-val="红狼" onclick="selectOption(this)">红狼</span>
+          <span class="option-btn" data-group="pub-ops" data-val="张姐" onclick="selectOption(this)">张姐</span>
+          <span class="option-btn" data-group="pub-ops" data-val="无名" onclick="selectOption(this)">无名</span>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <span class="op-section-label" style="background:var(--purple-dim);color:var(--purple)">👁️ 信息位</span>
+        <div class="option-group" style="display:inline-flex;margin-bottom:6px">
+          <span class="option-btn" data-group="pub-ops" data-val="露娜" onclick="selectOption(this)">露娜</span>
+          <span class="option-btn" data-group="pub-ops" data-val="回想" onclick="selectOption(this)">回想</span>
+          <span class="option-btn" data-group="pub-ops" data-val="鸟人" onclick="selectOption(this)">鸟人</span>
+          <span class="option-btn" data-group="pub-ops" data-val="骇爪" onclick="selectOption(this)">骇爪</span>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <span class="op-section-label" style="background:var(--gold-dim);color:var(--gold)">🛠️ 工程位</span>
+        <div class="option-group" style="display:inline-flex;margin-bottom:6px">
+          <span class="option-btn" data-group="pub-ops" data-val="老黑" onclick="selectOption(this)">老黑</span>
+          <span class="option-btn" data-group="pub-ops" data-val="乌鲁鲁" onclick="selectOption(this)">乌鲁鲁</span>
+          <span class="option-btn" data-group="pub-ops" data-val="盾构" onclick="selectOption(this)">盾构</span>
+          <span class="option-btn" data-group="pub-ops" data-val="比特" onclick="selectOption(this)">比特</span>
+        </div>
+      </div>
+      <div>
+        <span class="op-section-label" style="background:rgba(63,185,80,.1);color:var(--green)">💉 医疗位</span>
+        <div class="option-group" style="display:inline-flex">
+          <span class="option-btn" data-group="pub-ops" data-val="蜂衣" onclick="selectOption(this)">蜂衣</span>
+          <span class="option-btn" data-group="pub-ops" data-val="女医" onclick="selectOption(this)">女医</span>
+          <span class="option-btn" data-group="pub-ops" data-val="碟" onclick="selectOption(this)">碟</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 模式 & 地图 ━━━</h3>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">模式</span>
+        <span class="option-btn" data-group="pub-mode" data-val="机密" onclick="selectOption(this)">机密</span>
+        <span class="option-btn" data-group="pub-mode" data-val="绝密" onclick="selectOption(this)">绝密</span>
+        <span class="option-btn" data-group="pub-mode" data-val="都行" onclick="selectOption(this)">都行</span>
+      </div>
+      <div>
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">常玩地图（可多选）</span>
+        <div class="option-group">
+          <span class="option-btn" data-group="pub-maps" data-val="零号大坝" onclick="selectOption(this)">零号大坝</span>
+          <span class="option-btn" data-group="pub-maps" data-val="巴克什" onclick="selectOption(this)">巴克什</span>
+          <span class="option-btn" data-group="pub-maps" data-val="航天基地" onclick="selectOption(this)">航天基地</span>
+          <span class="option-btn" data-group="pub-maps" data-val="长弓溪谷" onclick="selectOption(this)">长弓溪谷</span>
+          <span class="option-btn" data-group="pub-maps" data-val="潮汐监狱" onclick="selectOption(this)">潮汐监狱</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 队伍要求 ━━━</h3>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">需要人数</span>
+        <span class="option-btn" data-group="pub-team" data-val="双人" onclick="selectOption(this)">👥 双人</span>
+        <span class="option-btn" data-group="pub-team" data-val="三人" onclick="selectOption(this)">👥 三人</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">语音要求</span>
+        <span class="option-btn" data-group="pub-voice" data-val="必须有麦" onclick="selectOption(this)">🎙️ 必须有麦</span>
+        <span class="option-btn" data-group="pub-voice" data-val="无所谓" onclick="selectOption(this)">无所谓</span>
+      </div>
+      <div class="form-row">
+        <label>在线时段</label>
+        <span style="font-size:13px;color:var(--text-dim)">每晚</span>
+        <input type="time" id="pub-timeStart" value="20:00" style="width:130px;flex:none">
+        <span style="font-size:13px;color:var(--text-dim)">─</span>
+        <input type="time" id="pub-timeEnd" value="23:00" style="width:130px;flex:none">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>━━━ 最后一步 ━━━</h3>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:6px">一句话介绍（最多 30 字）</span>
+        <textarea id="pub-bio" maxlength="30" placeholder="例：响枪就打全图追着人杀 来有配合的猛攻队友"></textarea>
+        <div class="char-count"><span id="bio-count">0</span>/30</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <span style="font-size:13px;color:var(--text-2);display:block;margin-bottom:8px">联系方式</span>
+        <span class="option-btn" data-group="pub-contact" data-val="游戏ID" onclick="selectOption(this)">🎮 留游戏ID</span>
+        <span class="option-btn" data-group="pub-contact" data-val="微信号" onclick="selectOption(this)">💬 留微信号</span>
+      </div>
+      <div class="form-row" id="wechat-row" style="display:none">
+        <label>微信号</label>
+        <input type="text" id="pub-wechat" placeholder="输入你的微信号">
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="publishCard()">🚀 发布找队友</button>
+  </div>
+</div>
+
+<!-- ============ 我的发布页 ============ -->
+<div class="page" id="page-mine">
+  <div class="form-page">
+    <h2 style="margin-bottom:16px;font-size:18px">👤 我的发布</h2>
+    <div id="my-cards-container">
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>还没有发布过找队友信息</p>
+        <p style="font-size:13px">去发布一条，让合适的队友找到你</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 联系弹窗 ============ -->
+<div class="modal-overlay" id="contact-modal">
+  <div class="modal">
+    <h3>📬 联系这位玩家</h3>
+    <div id="modal-content"></div>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal()">关闭</button>
+      <button class="btn-primary" onclick="sendMessage()">发送消息</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ==================== JS ==================== -->
+<script>
+const RANKS = ['青铜','白银','黄金','铂金','钻石','黑鹰','三角洲巅峰'];
+const PLAYSTYLES = ['撕咬流','劝架流','战术流','堵桥流','扰民流','不撤流','技能流','鼠鼠流'];
+const PLAYSTYLE_EMOJI = { '撕咬流':'🔥','劝架流':'🤝','战术流':'🧠','堵桥流':'🌉','扰民流':'🐺','不撤流':'💀','技能流':'⚙️','鼠鼠流':'🧀' };
+
+const OPERATOR_ROLES = {
+  '威龙':'突击','红狼':'突击','张姐':'突击','无名':'突击',
+  '露娜':'信息','回想':'信息','鸟人':'信息','骇爪':'信息',
+  '老黑':'工程','乌鲁鲁':'工程','盾构':'工程','比特':'工程',
+  '蜂衣':'医疗','女医':'医疗','碟':'医疗'
+};
+
+// 页面切换
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'square') renderSquare();
+  if (name === 'mine') renderMyCards();
+}
+
+// 数据存取
+function getCards() {
+  try { return JSON.parse(localStorage.getItem('delta_cards') || '[]'); }
+  catch(e) { return []; }
+}
+function saveCards(cards) { localStorage.setItem('delta_cards', JSON.stringify(cards)); }
+
+let myIdentity = localStorage.getItem('delta_my_identity') || '';
+function getMyCards() { return myIdentity ? getCards().filter(c => c.ownerId === myIdentity) : []; }
+
+// 选项选择
+function selectOption(el) {
+  const group = el.dataset.group;
+  const singleGroups = ['pub-gender','pub-rank','pub-equipment','pub-playstyle','pub-mode','pub-team','pub-voice','pub-contact'];
+  if (singleGroups.includes(group)) {
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+  } else {
+    el.classList.toggle('selected');
+  }
+  if (group === 'pub-contact') {
+    document.getElementById('wechat-row').style.display = el.dataset.val === '微信号' ? 'flex' : 'none';
+  }
+}
+
+function getSelectedValues(group) {
+  return Array.from(document.querySelectorAll(`[data-group="${group}"].selected`)).map(e => e.dataset.val);
+}
+function getSelectedValue(group) {
+  const el = document.querySelector(`[data-group="${group}"].selected`);
+  return el ? el.dataset.val : '';
+}
+
+// 字数统计
+document.addEventListener('DOMContentLoaded', () => {
+  const bioEl = document.getElementById('pub-bio');
+  if (bioEl) bioEl.addEventListener('input', () => { document.getElementById('bio-count').textContent = bioEl.value.length; });
+  renderSquare();
+});
+
+// 干员角色列表
+function getOperatorRolesList(ops) {
+  const roles = new Set();
+  ops.forEach(op => { if (OPERATOR_ROLES[op]) roles.add(OPERATOR_ROLES[op]); });
+  return Array.from(roles);
+}
+
+// 干员 CSS class
+function opClass(op) {
+  const role = OPERATOR_ROLES[op];
+  if (role === '突击') return 'op-assault';
+  if (role === '信息') return 'op-info';
+  if (role === '工程') return 'op-eng';
+  if (role === '医疗') return 'op-medic';
+  return '';
+}
+
+// 发布卡片
+function publishCard() {
+  const gameId = document.getElementById('pub-gameId').value.trim();
+  const gender = getSelectedValue('pub-gender');
+  const rank = getSelectedValue('pub-rank');
+  const kd = parseFloat(document.getElementById('pub-kd').value) || 0;
+  const equipment = getSelectedValue('pub-equipment');
+  const playstyle = getSelectedValue('pub-playstyle');
+  const mode = getSelectedValue('pub-mode');
+  const maps = getSelectedValues('pub-maps');
+  const ops = getSelectedValues('pub-ops');
+  const teamSize = getSelectedValue('pub-team');
+  const voice = getSelectedValue('pub-voice');
+  const contactType = getSelectedValue('pub-contact');
+  const timeStart = document.getElementById('pub-timeStart').value;
+  const timeEnd = document.getElementById('pub-timeEnd').value;
+  const bio = document.getElementById('pub-bio').value.trim();
+
+  if (!gameId) { alert('请输入游戏 ID'); return; }
+  if (!gender) { alert('请选择性别'); return; }
+  if (!rank) { alert('请选择段位'); return; }
+  if (!equipment) { alert('请选择装备风格'); return; }
+  if (!playstyle) { alert('请选择打法风格'); return; }
+  if (!mode) { alert('请选择模式'); return; }
+  if (maps.length === 0) { alert('请至少选一个地图'); return; }
+  if (!teamSize) { alert('请选择需要人数'); return; }
+  if (!voice) { alert('请选择语音要求'); return; }
+  if (!contactType) { alert('请选择联系方式'); return; }
+  if (contactType === '微信号' && !document.getElementById('pub-wechat').value.trim()) { alert('请输入微信号'); return; }
+  if (!bio) { alert('请输入一句话介绍'); return; }
+
+  if (!myIdentity) {
+    myIdentity = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    localStorage.setItem('delta_my_identity', myIdentity);
+  }
+
+  const card = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    ownerId: myIdentity, gameId, gender, rank, kd, equipment, playstyle,
+    mode, maps, ops, teamSize, voice, contactType,
+    contactValue: contactType === '微信号' ? document.getElementById('pub-wechat').value.trim() : gameId,
+    timeStart, timeEnd, bio, active: true, createdAt: Date.now(), messages: []
+  };
+
+  const cards = getCards();
+  cards.unshift(card);
+  saveCards(cards);
+
+  // 清空
+  document.querySelectorAll('#page-publish .selected').forEach(e => e.classList.remove('selected'));
+  document.getElementById('pub-gameId').value = '';
+  document.getElementById('pub-kd').value = '';
+  document.getElementById('pub-bio').value = '';
+  document.getElementById('pub-wechat').value = '';
+  document.getElementById('wechat-row').style.display = 'none';
+  document.getElementById('bio-count').textContent = '0';
+
+  alert('✅ 发布成功！去广场看看你的卡片吧。');
+  showPage('square');
+}
+
+// 时间重叠
+function timeOverlap(s1, e1, s2, e2) {
+  const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+  return Math.max(0, Math.min(toMin(e1),toMin(e2)) - Math.max(toMin(s1),toMin(s2)));
+}
+
+// 匹配度计算
+function calculateMatch(a, b) {
+  let score = 0;
+  if (a.playstyle === b.playstyle) score += 25;
+  const rankDiff = Math.abs(RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank));
+  if (rankDiff <= 1) score += 20; else if (rankDiff === 2) score += 10;
+  const aRoles = getOperatorRolesList(a.ops), bRoles = getOperatorRolesList(b.ops);
+  const hasComp = aRoles.some(ar => bRoles.some(br => ar !== br));
+  if (hasComp) {
+    const allRoles = new Set([...aRoles, ...bRoles]);
+    if (allRoles.size >= 3) score += 15; else if (allRoles.size >= 2) score += 12; else score += 5;
+  } else score += 3;
+  const kdDiff = Math.abs((a.kd||0) - (b.kd||0));
+  if (kdDiff <= 0.5) score += 12; else if (kdDiff <= 1) score += 6;
+  const mapOverlap = a.maps.filter(m => b.maps.includes(m));
+  if (mapOverlap.length) score += Math.min(10, mapOverlap.length * 5);
+  if (a.mode === b.mode || a.mode === '都行' || b.mode === '都行') score += 8;
+  if (a.teamSize === b.teamSize) score += 5;
+  if (a.equipment === b.equipment) score += 3;
+  if (timeOverlap(a.timeStart, a.timeEnd, b.timeStart, b.timeEnd) >= 60) score += 2;
+  return score;
+}
+
+function scoreLabel(s) {
+  if (s >= 80) return { text:'高度匹配', level:'high', bar:92 };
+  if (s >= 60) return { text:'可以试试', level:'mid', bar:65 };
+  return { text:'一般', level:'low', bar:35 };
+}
+
+// 渲染广场
+function renderSquare() {
+  const allCards = getCards().filter(c => c.active);
+  const container = document.getElementById('cards-container');
+  const empty = document.getElementById('empty-state');
+  if (allCards.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+
+  const fp = document.querySelector('#page-square .tag.active')?.dataset?.val || '';
+  const fm = document.getElementById('filter-mode').value;
+  const fr = document.getElementById('filter-rank').value;
+  const fe = document.getElementById('filter-equipment').value;
+  const fmap = document.getElementById('filter-map').value;
+  const ft = document.getElementById('filter-team').value;
+  const fkd = parseFloat(document.getElementById('filter-kd').value) || 0;
+
+  let filtered = allCards.filter(c => {
+    if (fp && c.playstyle !== fp) return false;
+    if (fm && c.mode !== '都行' && c.mode !== fm) return false;
+    if (fr && c.rank !== fr) return false;
+    if (fe && c.equipment !== fe) return false;
+    if (fmap && !c.maps.includes(fmap)) return false;
+    if (ft && c.teamSize !== ft) return false;
+    if (fkd > 0 && (c.kd||0) < fkd) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const myCard = myIdentity ? allCards.find(c => c.ownerId === myIdentity && c.active) : null;
+  if (myCard) {
+    filtered.forEach(c => {
+      if (c.ownerId === myIdentity) c._isMine = true;
+      else c._matchScore = calculateMatch(myCard, c);
+    });
+    filtered.sort((a,b) => {
+      if (a._isMine && !b._isMine) return -1;
+      if (!a._isMine && b._isMine) return 1;
+      return (b._matchScore||0) - (a._matchScore||0);
+    });
+  }
+
+  const highRanks = ['黑鹰','三角洲巅峰'];
+
+  container.innerHTML = filtered.map(c => {
+    const emoji = PLAYSTYLE_EMOJI[c.playstyle] || '';
+    const opsHtml = c.ops.map(op => `<span class="mini-tag ${opClass(op)}">${op}</span>`).join('');
+    const mapsHtml = c.maps.map(m => `<span class="mini-tag map">${m}</span>`).join('');
+    const rankCls = highRanks.includes(c.rank) ? ' rank-high' : '';
+
+    let matchHtml = '';
+    if (c._matchScore !== undefined) {
+      const sl = scoreLabel(c._matchScore);
+      matchHtml = `<div class="match-score ${sl.level}">
+        <div class="match-bar"><div class="match-bar-fill ${sl.level}" style="width:${sl.bar}%"></div></div>
+        ${c._matchScore}分 · ${sl.text}
+      </div>`;
+    }
+
+    const mineBdg = c._isMine ? '<span class="mine-badge">👤 我的</span>' : '';
+    const actionBtn = c._isMine
+      ? '<button class="btn-contact" style="opacity:.4;cursor:default">这是我</button>'
+      : `<button class="btn-contact" onclick="openContact('${c.id}')">联系TA</button>`;
+
+    return `<div class="card${c._isMine?' mine':''}">
+      <span class="card-gender">${c.gender==='男'?'♂️':'♀️'}</span>
+      <div class="card-header">
+        <span class="card-playstyle">${emoji} ${c.playstyle}</span>
+        <span class="card-rank${rankCls}">${c.rank}</span>
+      </div>
+      <div class="card-mode-row">${c.mode} · ${c.teamSize}  ${mineBdg}</div>
+      <div class="card-stats">
+        <span class="card-stat">KD <strong class="kd-val">${c.kd||'--'}</strong></span>
+        <span class="card-stat">装备 <strong>${c.equipment}</strong></span>
+        <span class="card-stat">语音 <strong>${c.voice}</strong></span>
+      </div>
+      ${mapsHtml?`<div class="card-maps">${mapsHtml}</div>`:''}
+      ${opsHtml?`<div class="card-ops">${opsHtml}</div>`:''}
+      <div class="card-bio">"${c.bio}"</div>
+      <div class="card-footer">
+        <span class="card-time">🕐 ${c.timeStart}-${c.timeEnd}</span>
+        ${matchHtml}
+        ${actionBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleFilter(el) {
+  const parent = el.parentElement;
+  parent.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+  if (el.dataset.val) el.classList.add('active');
+  applyFilters();
+}
+function applyFilters() { renderSquare(); }
+
+// 联系弹窗
+let currentContactCard = null;
+function openContact(cardId) {
+  const card = getCards().find(c => c.id === cardId);
+  if (!card) return;
+  currentContactCard = card;
+  document.getElementById('modal-content').innerHTML = `
+    <p><strong style="color:#f0f2f5">${PLAYSTYLE_EMOJI[card.playstyle]||''} ${card.playstyle} · ${card.rank}</strong></p>
+    <p style="font-size:13px;color:var(--text-2)">🕐 ${card.timeStart}-${card.timeEnd}</p>
+    <p style="font-size:13px;color:var(--text-2)">🎮 对方游戏ID：</p>
+    <div class="copy-id" onclick="copyId('${card.gameId}')" title="点击复制">${card.gameId} 📋</div>
+    ${card.contactType==='微信号'?`<p style="font-size:13px;color:var(--text-2)">💬 微信号：<strong style="color:#fff">${card.contactValue}</strong></p>`:''}
+    <p style="font-size:13px;color:var(--text-2);margin-top:10px">或者留个消息让对方加你：</p>
+    <textarea id="modal-msg" placeholder="哥们我也${card.playstyle}打法，今晚有空一起？" maxlength="100" style="margin-top:6px"></textarea>
+  `;
+  document.getElementById('contact-modal').classList.add('show');
+}
+function closeModal() { document.getElementById('contact-modal').classList.remove('show'); currentContactCard = null; }
+function copyId(id) {
+  navigator.clipboard.writeText(id).then(() => alert('✅ 已复制：'+id+'\n去游戏里搜索添加好友吧！'))
+    .catch(() => prompt('复制下面的游戏ID：', id));
+}
+function sendMessage() {
+  if (!currentContactCard) return;
+  const msg = document.getElementById('modal-msg').value.trim();
+  if (!msg) { alert('写点什么吧'); return; }
+  const cards = getCards();
+  const idx = cards.findIndex(c => c.id === currentContactCard.id);
+  if (idx === -1) return;
+  cards[idx].messages.push({ from: myIdentity, content: msg, time: Date.now() });
+  saveCards(cards);
+  document.getElementById('modal-msg').value = '';
+  alert('✅ 消息已发送！');
+  closeModal();
+}
+
+// 我的发布
+function renderMyCards() {
+  const container = document.getElementById('my-cards-container');
+  const myCards = getMyCards();
+  if (myCards.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>还没有发布过找队友信息</p><p style="font-size:13px">去发布一条，让合适的队友找到你</p></div>`;
+    return;
+  }
+  container.innerHTML = myCards.map(card => {
+    const emoji = PLAYSTYLE_EMOJI[card.playstyle]||'';
+    const msgsHtml = card.messages.length ? card.messages.map(m => {
+      const d = new Date(m.time);
+      return `<div class="msg-item">
+        <div class="msg-meta"><span>来自匿名玩家</span><span>${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}</span></div>
+        <div style="font-size:13px;color:#dde">"${m.content}"</div></div>`;
+    }).join('') : '<p style="font-size:13px;color:var(--text-dim);margin:8px 0">暂无留言</p>';
+    return `<div class="my-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-weight:700;color:#f0f2f5">${emoji} ${card.playstyle} · ${card.rank}</span>
+        <span class="status ${card.active?'active-status':'paused'}">${card.active?'🟢 展示中':'⏸️ 已暂停'}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:6px">KD ${card.kd} · ${card.equipment} · ${card.mode} · ${card.teamSize} · ${card.timeStart}-${card.timeEnd}</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">"${card.bio}"</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button style="padding:4px 14px;font-size:12px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text-2);cursor:pointer" onclick="toggleCardActive('${card.id}')">${card.active?'⏸️ 暂停':'▶️ 恢复'}</button>
+        <button style="padding:4px 14px;font-size:12px;border-radius:4px;border:1px solid rgba(248,81,73,.2);background:rgba(248,81,73,.06);color:var(--red);cursor:pointer" onclick="deleteCard('${card.id}')">🗑️ 删除</button>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:10px">
+        <strong style="font-size:13px;color:#dde">📨 收到的留言 (${card.messages.length})</strong>
+        ${msgsHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleCardActive(cardId) { const cards=getCards(); const i=cards.findIndex(c=>c.id===cardId); if(i>-1){cards[i].active=!cards[i].active;saveCards(cards);renderMyCards();renderSquare();} }
+function deleteCard(cardId) { if(!confirm('确定删除？'))return; saveCards(getCards().filter(c=>c.id!==cardId)); renderMyCards(); renderSquare(); }
+</script>
+</body>
+</html>
