@@ -511,6 +511,7 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim
     <button onclick="showPage('mine')" id="nav-mine">我的发布</button>
   </nav>
 </header>
+<div id="status-bar" style="display:none;text-align:center;padding:8px 12px;font-size:13px;font-weight:600;position:sticky;top:0;z-index:999;"></div>
 
 <!-- ==================== 主容器 ==================== -->
 <main>
@@ -764,6 +765,7 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim
 
 <!-- ==================== JS ==================== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.supabase||document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');</script>
 <script>
 const RANKS = ['青铜','白银','黄金','铂金','钻石','黑鹰','三角洲巅峰'];
 const PLAYSTYLES = ['撕咬流','劝架流','战术流','堵桥流','扰民流','不撤流','技能流','鼠鼠流'];
@@ -776,10 +778,29 @@ const OPERATOR_ROLES = {
   '蜂衣':'医疗','女医':'医疗','碟':'医疗'
 };
 
+// ==================== 状态提示 ====================
+const statusBar = document.getElementById('status-bar');
+function showStatus(msg, type) {
+  if (!statusBar) return;
+  statusBar.style.display = 'block';
+  if (type === 'ok') { statusBar.style.background = '#0d2818'; statusBar.style.color = '#3fb950'; }
+  else if (type === 'warn') { statusBar.style.background = '#332600'; statusBar.style.color = '#e6a030'; }
+  else { statusBar.style.background = '#2d0f0f'; statusBar.style.color = '#f2543d'; }
+  statusBar.textContent = msg;
+}
+function hideStatus() { if (statusBar) statusBar.style.display = 'none'; }
+
 // Supabase 初始化
 const SUPABASE_URL = 'https://gugnthkphafbwvyfmtzc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1Z250aGtwaGFmYnd2eWZtdHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMzA3MTIsImV4cCI6MjA5NTcwNjcxMn0.ICDGFBQ3DPqbmfl-R0CiMo3ZWVjVhNLX_SWYctRb4ms';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabase;
+try {
+  if (!window.supabase) throw new Error('Supabase SDK 未加载（CDN 超时）');
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) {
+  showStatus('⚠️ ' + e.message + ' — 按钮无法工作，请检查网络后刷新', 'err');
+  console.error('初始化失败:', e);
+}
 
 // 页面切换
 function showPage(name) {
@@ -792,26 +813,45 @@ function showPage(name) {
 }
 
 // 数据存取
-// Supabase 数据存取
 async function getCards() {
-  const { data, error } = await supabase.from('cards').select('*').order('created_at', { ascending: false });
-  if (error) { console.error('读取失败:', error); return []; }
-  return data || [];
+  if (!supabase) { showStatus('⚠️ 数据库未连接，请检查网络后刷新页面', 'err'); return []; }
+  try {
+    const { data, error } = await supabase.from('cards').select('*').order('created_at', { ascending: false });
+    if (error) { showStatus('⚠️ 读取数据失败: ' + error.message, 'err'); console.error('读取失败:', error); return []; }
+    hideStatus();
+    return data || [];
+  } catch(e) {
+    showStatus('⚠️ 网络请求超时 — Supabase 可能被墙或梯子断了', 'err');
+    console.error('请求异常:', e);
+    return [];
+  }
 }
 async function saveCard(card) {
-  const { error } = await supabase.from('cards').insert([card]);
-  if (error) console.error('保存失败:', error);
-  return !error;
+  if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
+  try {
+    const { error } = await supabase.from('cards').insert([card]);
+    if (error) { showStatus('⚠️ 保存失败: ' + error.message, 'err'); console.error('保存失败:', error); return false; }
+    hideStatus();
+    return true;
+  } catch(e) { showStatus('⚠️ 网络请求超时，发布失败', 'err'); return false; }
 }
 async function updateCard(id, updates) {
-  const { error } = await supabase.from('cards').update(updates).eq('id', id);
-  if (error) console.error('更新失败:', error);
-  return !error;
+  if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
+  try {
+    const { error } = await supabase.from('cards').update(updates).eq('id', id);
+    if (error) { showStatus('⚠️ 更新失败: ' + error.message, 'err'); console.error('更新失败:', error); return false; }
+    hideStatus();
+    return true;
+  } catch(e) { showStatus('⚠️ 网络请求超时，操作失败', 'err'); return false; }
 }
 async function deleteCardDB(id) {
-  const { error } = await supabase.from('cards').delete().eq('id', id);
-  if (error) console.error('删除失败:', error);
-  return !error;
+  if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
+  try {
+    const { error } = await supabase.from('cards').delete().eq('id', id);
+    if (error) { showStatus('⚠️ 删除失败: ' + error.message, 'err'); console.error('删除失败:', error); return false; }
+    hideStatus();
+    return true;
+  } catch(e) { showStatus('⚠️ 网络请求超时，删除失败', 'err'); return false; }
 }
 
 let myIdentity = localStorage.getItem('delta_my_identity') || '';
