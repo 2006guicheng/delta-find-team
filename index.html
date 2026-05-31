@@ -790,22 +790,13 @@ function showStatus(msg, type) {
 }
 function hideStatus() { if (statusBar) { statusBar.style.background = '#0d2818'; statusBar.style.color = '#3fb950'; statusBar.textContent = '✅ 数据库已连接'; } }
 
-// Supabase 初始化（带超时）
+// Supabase 初始化
 const SUPABASE_URL = 'https://gugnthkphafbwvyfmtzc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1Z250aGtwaGFmYnd2eWZtdHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMzA3MTIsImV4cCI6MjA5NTcwNjcxMn0.ICDGFBQ3DPqbmfl-R0CiMo3ZWVjVhNLX_SWYctRb4ms';
-const FETCH_TIMEOUT = 8000; // 8秒超时
 let supabase;
 try {
   if (!window.supabase) throw new Error('Supabase SDK 未加载（CDN 超时）');
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    global: {
-      fetch: (...args) => {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
-        return fetch(args[0], { ...args[1], signal: ctrl.signal }).finally(() => clearTimeout(timer));
-      }
-    }
-  });
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 } catch(e) {
   showStatus('⚠️ ' + e.message + ' — 按钮无法工作，请检查网络后刷新', 'err');
   console.error('初始化失败:', e);
@@ -822,15 +813,24 @@ function showPage(name) {
 }
 
 // 数据存取
+function withTimeout(promise, ms, msg) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(msg || '请求超时')), ms))
+  ]);
+}
 async function getCards() {
   if (!supabase) { showStatus('⚠️ 数据库未连接，请检查网络后刷新页面', 'err'); return []; }
   try {
-    const { data, error } = await supabase.from('cards').select('*').order('created_at', { ascending: false });
+    const { data, error } = await withTimeout(
+      supabase.from('cards').select('*').order('created_at', { ascending: false }),
+      8000, 'Supabase 连接超时'
+    );
     if (error) { showStatus('⚠️ 读取数据失败: ' + error.message, 'err'); console.error('读取失败:', error); return []; }
     hideStatus();
     return data || [];
   } catch(e) {
-    showStatus('⚠️ 网络请求超时 — Supabase 可能被墙或梯子断了', 'err');
+    showStatus('⚠️ ' + e.message + ' — 可能被墙或梯子未覆盖浏览器请求', 'err');
     console.error('请求异常:', e);
     return [];
   }
@@ -838,29 +838,29 @@ async function getCards() {
 async function saveCard(card) {
   if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
   try {
-    const { error } = await supabase.from('cards').insert([card]);
+    const { error } = await withTimeout(supabase.from('cards').insert([card]), 8000, '保存超时');
     if (error) { showStatus('⚠️ 保存失败: ' + error.message, 'err'); console.error('保存失败:', error); return false; }
     hideStatus();
     return true;
-  } catch(e) { showStatus('⚠️ 网络请求超时，发布失败', 'err'); return false; }
+  } catch(e) { showStatus('⚠️ ' + e.message + '，操作失败', 'err'); return false; }
 }
 async function updateCard(id, updates) {
   if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
   try {
-    const { error } = await supabase.from('cards').update(updates).eq('id', id);
+    const { error } = await withTimeout(supabase.from('cards').update(updates).eq('id', id), 8000, '更新超时');
     if (error) { showStatus('⚠️ 更新失败: ' + error.message, 'err'); console.error('更新失败:', error); return false; }
     hideStatus();
     return true;
-  } catch(e) { showStatus('⚠️ 网络请求超时，操作失败', 'err'); return false; }
+  } catch(e) { showStatus('⚠️ ' + e.message + '，操作失败', 'err'); return false; }
 }
 async function deleteCardDB(id) {
   if (!supabase) { showStatus('⚠️ 数据库未连接', 'err'); return false; }
   try {
-    const { error } = await supabase.from('cards').delete().eq('id', id);
+    const { error } = await withTimeout(supabase.from('cards').delete().eq('id', id), 8000, '删除超时');
     if (error) { showStatus('⚠️ 删除失败: ' + error.message, 'err'); console.error('删除失败:', error); return false; }
     hideStatus();
     return true;
-  } catch(e) { showStatus('⚠️ 网络请求超时，删除失败', 'err'); return false; }
+  } catch(e) { showStatus('⚠️ ' + e.message + '，删除失败', 'err'); return false; }
 }
 
 let myIdentity = localStorage.getItem('delta_my_identity') || '';
