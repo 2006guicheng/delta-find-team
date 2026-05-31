@@ -790,13 +790,22 @@ function showStatus(msg, type) {
 }
 function hideStatus() { if (statusBar) { statusBar.style.background = '#0d2818'; statusBar.style.color = '#3fb950'; statusBar.textContent = '✅ 数据库已连接'; } }
 
-// Supabase 初始化
+// Supabase 初始化（带超时）
 const SUPABASE_URL = 'https://gugnthkphafbwvyfmtzc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1Z250aGtwaGFmYnd2eWZtdHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMzA3MTIsImV4cCI6MjA5NTcwNjcxMn0.ICDGFBQ3DPqbmfl-R0CiMo3ZWVjVhNLX_SWYctRb4ms';
+const FETCH_TIMEOUT = 8000; // 8秒超时
 let supabase;
 try {
   if (!window.supabase) throw new Error('Supabase SDK 未加载（CDN 超时）');
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    global: {
+      fetch: (...args) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
+        return fetch(args[0], { ...args[1], signal: ctrl.signal }).finally(() => clearTimeout(timer));
+      }
+    }
+  });
 } catch(e) {
   showStatus('⚠️ ' + e.message + ' — 按钮无法工作，请检查网络后刷新', 'err');
   console.error('初始化失败:', e);
