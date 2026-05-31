@@ -511,7 +511,7 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim
     <button onclick="showPage('mine')" id="nav-mine">我的发布</button>
   </nav>
 </header>
-<div id="status-bar" style="text-align:center;padding:6px 12px;font-size:12px;font-weight:600;position:sticky;top:0;z-index:999;background:#0d2818;color:#3fb950;">🔗 正在连接数据库...</div>
+<div id="status-bar" style="text-align:center;padding:6px 12px;font-size:12px;font-weight:600;position:sticky;top:0;z-index:999;background:#0d2818;color:#3fb950;">🔗 正在连接数据库... <span id="timer">0</span> 秒</div>
 
 <!-- ==================== 主容器 ==================== -->
 <main>
@@ -893,11 +893,22 @@ function getSelectedValue(group) {
   return el ? el.dataset.val : '';
 }
 
-// 字数统计
+// 字数统计 + 计时器
 document.addEventListener('DOMContentLoaded', () => {
   const bioEl = document.getElementById('pub-bio');
   if (bioEl) bioEl.addEventListener('input', () => { document.getElementById('bio-count').textContent = bioEl.value.length; });
-  renderSquare();
+
+  // 计时器：证明 JS 在运行
+  const timerEl = document.getElementById('timer');
+  let sec = 0;
+  const timerId = setInterval(() => {
+    sec++;
+    if (timerEl) timerEl.textContent = sec;
+    if (sec >= 20) { clearInterval(timerId); if (timerEl) timerEl.textContent = '20+ (超时)'; }
+  }, 1000);
+
+  // 启动数据加载，完成后停止计时器
+  renderSquare().finally(() => clearInterval(timerId));
 });
 
 // 干员角色列表
