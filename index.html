@@ -511,7 +511,7 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim
     <button onclick="showPage('mine')" id="nav-mine">我的发布</button>
   </nav>
 </header>
-<div id="status-bar" style="display:none;text-align:center;padding:8px 12px;font-size:13px;font-weight:600;position:sticky;top:0;z-index:999;"></div>
+<div id="status-bar" style="text-align:center;padding:6px 12px;font-size:12px;font-weight:600;position:sticky;top:0;z-index:999;background:#0d2818;color:#3fb950;">🔗 正在连接数据库...</div>
 
 <!-- ==================== 主容器 ==================== -->
 <main>
@@ -788,7 +788,7 @@ function showStatus(msg, type) {
   else { statusBar.style.background = '#2d0f0f'; statusBar.style.color = '#f2543d'; }
   statusBar.textContent = msg;
 }
-function hideStatus() { if (statusBar) statusBar.style.display = 'none'; }
+function hideStatus() { if (statusBar) { statusBar.style.background = '#0d2818'; statusBar.style.color = '#3fb950'; statusBar.textContent = '✅ 数据库已连接'; } }
 
 // Supabase 初始化
 const SUPABASE_URL = 'https://gugnthkphafbwvyfmtzc.supabase.co';
