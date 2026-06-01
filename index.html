@@ -1614,12 +1614,38 @@ async function sendMessage() {
   if (!msg) { showToast('写点什么吧', 'err'); return; }
   var cards = await getCards();
   var card = cards.find(function(c) { return c.id === currentContactCard.id; });
-  if (!card) return;
+  if (!card) { showToast('卡片不存在，请刷新重试', 'err'); return; }
   var newMessages = (card.messages || []).concat([{ from: myIdentity, content: msg, time: Date.now() }]);
-  await updateCard(card.id, { messages: newMessages });
+  var ok = await updateCard(card.id, { messages: newMessages });
+  if (!ok) { showToast('⚠️ 发送失败，请检查网络后重试', 'err'); return; }
   document.getElementById('modal-msg').value = '';
   showToast('✅ 消息已发送！', 'ok');
   closeModal();
+}
+
+// 留言回复
+function replyToMsg(cardId, msgIdx) {
+  var box = document.getElementById('reply-box-' + msgIdx);
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  var input = document.getElementById('reply-input-' + msgIdx);
+  if (input) input.focus();
+}
+async function submitReply(cardId, msgIdx) {
+  var input = document.getElementById('reply-input-' + msgIdx);
+  if (!input) return;
+  var reply = input.value.trim();
+  if (!reply) { showToast('写点什么吧', 'err'); return; }
+  var cards = await getCards();
+  var card = cards.find(function(c) { return c.id === cardId; });
+  if (!card) { showToast('卡片不存在，请刷新重试', 'err'); return; }
+  var newMsgs = card.messages || [];
+  if (newMsgs[msgIdx]) newMsgs[msgIdx] = Object.assign({}, newMsgs[msgIdx], { _reply: reply });
+  var ok = await updateCard(cardId, { messages: newMsgs });
+  if (!ok) { showToast('⚠️ 回复失败，请检查网络后重试', 'err'); return; }
+  input.value = '';
+  showToast('✅ 回复已发送！', 'ok');
+  renderMyCards();
 }
 
 // 我的发布
@@ -1643,10 +1669,12 @@ async function renderMyCards() {
       ? '<button style="padding:4px 12px;font-size:12px;border-radius:4px;border:1px solid var(--gold);background:var(--gold-dim);color:var(--gold);cursor:pointer" onclick="renewCard(\'' + card.id + '\')">🔄 续期</button>'
       : '';
 
-    var msgsHtml = (card.messages||[]).length ? card.messages.map(function(m) {
+    var msgsHtml = (card.messages||[]).length ? card.messages.map(function(m, idx) {
       if (m._type === '_renewed') return '<div class="msg-item"><div class="msg-meta"><span>🔄 系统</span><span>' + new Date(m.time).toLocaleDateString() + '</span></div><div style="font-size:12px;color:var(--text-dim)">续期操作</div></div>';
       var d = new Date(m.time);
-      return '<div class="msg-item"><div class="msg-meta"><span>来自匿名玩家</span><span>' + (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0') + '</span></div><div style="font-size:13px;color:#dde">"' + m.content + '"</div></div>';
+      var replied = m._reply ? '<div style="margin-top:6px;padding:6px 10px;background:rgba(230,160,48,.06);border-left:2px solid var(--gold);border-radius:0 4px 4px 0;font-size:12px;color:var(--gold)">↳ 你回复了：' + m._reply + '</div>' : '';
+      var replyBtn = m._reply ? '' : ' <button onclick="replyToMsg(\'' + card.id + '\',' + idx + ')" style="padding:2px 10px;font-size:11px;border-radius:3px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text-2);cursor:pointer;margin-left:4px">💬 回复</button>';
+      return '<div class="msg-item"><div class="msg-meta"><span>来自匿名玩家</span><span>' + (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0') + '</span></div><div style="font-size:13px;color:#dde">"' + m.content + '"' + replyBtn + '</div>' + replied + '<div id="reply-box-' + idx + '" style="margin-top:6px;display:none"><input id="reply-input-' + idx + '" placeholder="输入回复..." maxlength="100" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:#fff;font-size:13px"><button onclick="submitReply(\'' + card.id + '\',' + idx + ')" style="margin-top:6px;padding:5px 16px;border-radius:5px;border:none;background:var(--gold-dim);color:var(--gold);cursor:pointer;font-size:12px;font-weight:600">发送回复</button></div></div>';
     }).join('') : '<p style="font-size:13px;color:var(--text-dim);margin:8px 0">暂无留言</p>';
 
     return '<div class="my-card">' +
